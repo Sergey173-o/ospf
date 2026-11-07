@@ -1,0 +1,8 @@
+---
+- name: restart frr
+  ansible.builtin.service:
+    name: frr
+    state: restarted
+    enabled: true
+  tags:
+    - setup_ospf

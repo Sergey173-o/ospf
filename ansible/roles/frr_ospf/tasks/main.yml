@@ -1,0 +1,83 @@
+---
+- name: Обновить кэш apt
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Установить базовые утилиты
+  ansible.builtin.apt:
+    name:
+      - vim
+      - traceroute
+      - tcpdump
+      - net-tools
+    state: present
+
+- name: Отключить и остановить ufw (мешает OSPF)
+  ansible.builtin.service:
+    name: ufw
+    state: stopped
+    enabled: false
+
+- name: Добавить GPG-ключ репозитория FRR
+  ansible.builtin.apt_key:
+    url: "https://deb.frrouting.org/frr/keys.asc"
+    state: present
+
+- name: Добавить репозиторий FRR
+  ansible.builtin.apt_repository:
+    repo: "deb https://deb.frrouting.org/frr {{ ansible_distribution_release }} frr-stable"
+    state: present
+
+- name: Установить FRR
+  ansible.builtin.apt:
+    name:
+      - frr
+      - frr-pythontools
+    state: present
+    update_cache: true
+
+- name: Включить форвардинг транзитных пакетов (IPv4)
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.all.forwarding
+    value: '1'
+    sysctl_set: true
+    state: present
+    reload: true
+
+- name: Отключить rp_filter (разрешить ассиметричную маршрутизацию)
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.all.rp_filter
+    value: '0'
+    sysctl_set: true
+    state: present
+    reload: true
+
+- name: Положить /etc/frr/daemons (включить zebra, ospfd, staticd)
+  ansible.builtin.template:
+    src: daemons.j2
+    dest: /etc/frr/daemons
+    owner: frr
+    group: frr
+    mode: '0640'
+  notify: restart frr
+
+- name: Сгенерировать /etc/frr/frr.conf по host_vars этого роутера
+  ansible.builtin.template:
+    src: frr.conf.j2
+    dest: /etc/frr/frr.conf
+    owner: frr
+    group: frr
+    mode: '0640'
+  tags:
+    - setup_ospf
+  notify: restart frr
+
+- name: Применить обработчики сразу (получить работающий FRR к концу плея)
+  ansible.builtin.meta: flush_handlers
+
+- name: FRR включён в автозагрузку и запущен
+  ansible.builtin.service:
+    name: frr
+    state: started
+    enabled: true

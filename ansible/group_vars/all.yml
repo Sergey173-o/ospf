@@ -1,0 +1,10 @@
+---
+router_id_enable: true
+hello_interval: 10
+dead_interval: 30
+expensive_cost: 1000
+
+# Переключатель для перехода от ассиметричного роутинга к симметричному.
+# false — только enp0s8 на router1 "дорогой" -> роутинг ассиметричный (по заданию, пункт 2)
+# true  — enp0s8 на router1 И router2 "дорогие" -> роутинг становится симметричным (пункт 3)
+symmetric_routing: false

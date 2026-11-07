@@ -1,0 +1,36 @@
+!
+frr version 8.1
+frr defaults traditional
+hostname {{ ansible_hostname }}
+log syslog informational
+no ipv6 forwarding
+service integrated-vtysh-config
+!
+{% for iface in ospf_interfaces %}
+interface {{ iface.ifname }}
+ description {{ iface.description }}
+ ip address {{ iface.ip }}/{{ iface.prefix }}
+ ip ospf mtu-ignore
+{% set is_expensive = (iface.expensive_when == 'always') or (iface.expensive_when == 'if_symmetric' and symmetric_routing) %}
+{% if is_expensive %}
+ ip ospf cost {{ expensive_cost }}
+{% else %}
+ !ip ospf cost {{ expensive_cost }}
+{% endif %}
+ ip ospf hello-interval {{ hello_interval }}
+ ip ospf dead-interval {{ dead_interval }}
+!
+{% endfor %}
+router ospf
+{% if router_id_enable %}
+ router-id {{ router_id }}
+{% else %}
+ !router-id {{ router_id }}
+{% endif %}
+{% for iface in ospf_interfaces %}
+ network {{ iface.network }} area {{ iface.area }}
+{% endfor %}
+ default-information originate always
+!
+log file /var/log/frr/frr.log
+!

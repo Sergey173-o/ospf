@@ -1,0 +1,27 @@
+---
+router_id: 2.2.2.2
+
+ospf_interfaces:
+  - ifname: enp0s8
+    description: r1-r2
+    ip: 10.0.10.2
+    prefix: 30
+    network: 10.0.10.0/30
+    area: 0
+    expensive_when: if_symmetric   # дорогим становится только когда symmetric_routing: true
+
+  - ifname: enp0s9
+    description: r2-r3
+    ip: 10.0.11.2
+    prefix: 30
+    network: 10.0.11.0/30
+    area: 0
+    expensive_when: never
+
+  - ifname: enp0s10
+    description: net2
+    ip: 192.168.20.1
+    prefix: 24
+    network: 192.168.20.0/24
+    area: 0
+    expensive_when: never

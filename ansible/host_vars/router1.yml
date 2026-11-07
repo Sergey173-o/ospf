@@ -1,0 +1,27 @@
+---
+router_id: 1.1.1.1
+
+ospf_interfaces:
+  - ifname: enp0s8
+    description: r1-r2
+    ip: 10.0.10.1
+    prefix: 30
+    network: 10.0.10.0/30
+    area: 0
+    expensive_when: always   # именно этот линк делаем "дорогим" — источник ассиметрии
+
+  - ifname: enp0s9
+    description: r1-r3
+    ip: 10.0.12.1
+    prefix: 30
+    network: 10.0.12.0/30
+    area: 0
+    expensive_when: never
+
+  - ifname: enp0s10
+    description: net1
+    ip: 192.168.10.1
+    prefix: 24
+    network: 192.168.10.0/24
+    area: 0
+    expensive_when: never

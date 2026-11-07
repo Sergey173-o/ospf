@@ -1,0 +1,27 @@
+---
+router_id: 3.3.3.3
+
+ospf_interfaces:
+  - ifname: enp0s8
+    description: r2-r3
+    ip: 10.0.11.1
+    prefix: 30
+    network: 10.0.11.0/30
+    area: 0
+    expensive_when: never
+
+  - ifname: enp0s9
+    description: r1-r3
+    ip: 10.0.12.2
+    prefix: 30
+    network: 10.0.12.0/30
+    area: 0
+    expensive_when: never
+
+  - ifname: enp0s10
+    description: net3
+    ip: 192.168.30.1
+    prefix: 24
+    network: 192.168.30.0/24
+    area: 0
+    expensive_when: never
