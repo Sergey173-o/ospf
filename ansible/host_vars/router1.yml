@@ -2,7 +2,7 @@
 router_id: 1.1.1.1
 
 ospf_interfaces:
-  - ifname: enp0s8
+  - ifname: eth1
     description: r1-r2
     ip: 10.0.10.1
     prefix: 30
@@ -10,7 +10,7 @@ ospf_interfaces:
     area: 0
     expensive_when: always   # именно этот линк делаем "дорогим" — источник ассиметрии
 
-  - ifname: enp0s9
+  - ifname: eth2
     description: r1-r3
     ip: 10.0.12.1
     prefix: 30
@@ -25,3 +25,6 @@ ospf_interfaces:
     network: 192.168.10.0/24
     area: 0
     expensive_when: never
+
+# v2 — 2026-11-07
+# Имена транзитных интерфейсов заменены на eth1 и eth2 по выводу стенда.
