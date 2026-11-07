@@ -293,7 +293,21 @@ root@nfsc:~/ospf-hw#
 
 
 ```bash
-root@nfsc:~/ospf-hw# ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook -i ansible/hosts ansible/provision.yml -t setup_ospf -e '{"symmetric_routing": false}'
+root@nfsc:~/ospf-hw# grep -n 'ifname:' ansible/host_vars/router*.yml
+sed -i -e 's/\benp0s8\b/eth1/g' -e 's/\benp0s9\b/eth2/g' ansible/host_vars/router*.yml
+
+ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook \
+  -i ansible/hosts ansible/provision.yml -t setup_ospf \
+  -e '{"symmetric_routing": false}'
+ansible/host_vars/router1.yml:5:  - ifname: enp0s8
+ansible/host_vars/router1.yml:13:  - ifname: enp0s9
+ansible/host_vars/router1.yml:21:  - ifname: enp0s10
+ansible/host_vars/router2.yml:5:  - ifname: enp0s8
+ansible/host_vars/router2.yml:13:  - ifname: enp0s9
+ansible/host_vars/router2.yml:21:  - ifname: enp0s10
+ansible/host_vars/router3.yml:5:  - ifname: enp0s8
+ansible/host_vars/router3.yml:13:  - ifname: enp0s9
+ansible/host_vars/router3.yml:21:  - ifname: enp0s10
 
 PLAY [OSPF lab (FRR)] *******************************************************************************************************************************************************************************************************
 
@@ -303,9 +317,35 @@ ok: [router3]
 ok: [router2]
 
 TASK [frr_ospf : Сгенерировать /etc/frr/frr.conf по host_vars этого роутера] ************************************************************************************************************************************************
-ok: [router2]
+changed: [router1]
+changed: [router3]
+changed: [router2]
+
+RUNNING HANDLER [frr_ospf : restart frr] ************************************************************************************************************************************************************************************
+changed: [router1]
+changed: [router3]
+changed: [router2]
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************************
+router1                    : ok=3    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+router2                    : ok=3    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+router3                    : ok=3    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+root@nfsc:~/ospf-hw# ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook \
+  -i ansible/hosts ansible/provision.yml -t setup_ospf \
+  -e '{"symmetric_routing": false}'
+
+PLAY [OSPF lab (FRR)] *******************************************************************************************************************************************************************************************************
+
+TASK [Gathering Facts] ******************************************************************************************************************************************************************************************************
 ok: [router1]
 ok: [router3]
+ok: [router2]
+
+TASK [frr_ospf : Сгенерировать /etc/frr/frr.conf по host_vars этого роутера] ************************************************************************************************************************************************
+ok: [router1]
+ok: [router3]
+ok: [router2]
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************************
 router1                    : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
@@ -313,72 +353,34 @@ router2                    : ok=2    changed=0    unreachable=0    failed=0    s
 router3                    : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 
 root@nfsc:~/ospf-hw# vagrant ssh router1 -c 'ip route get 192.168.20.1 from 192.168.10.1'
-192.168.20.1 from 192.168.10.1 via 10.0.10.2 dev eth1 uid 1000
+192.168.20.1 from 192.168.10.1 via 10.0.12.2 dev eth2 uid 1000
     cache
 root@nfsc:~/ospf-hw# vagrant ssh router2 -c 'ip route get 192.168.10.1 from 192.168.20.1'
 192.168.10.1 from 192.168.20.1 via 10.0.10.1 dev eth1 uid 1000
     cache
-root@nfsc:~/ospf-hw# pwd
-/root/ospf-hw
-
-```
-
-В первом терминале захват на `router2`:
-
-```bash
-root@nfsc:~/ospf-hw# vagrant ssh router2 -c 'sudo tcpdump -ni any "icmp and host 192.168.10.1 and host 192.168.20.1"'
-tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
-listening on any, link-type LINUX_SLL (Linux cooked v1), capture size 262144 bytes
-17:39:09.423643 IP 192.168.10.1 > 192.168.20.1: ICMP echo request, id 1, seq 1, length 64
-17:39:09.424068 IP 192.168.20.1 > 192.168.10.1: ICMP echo reply, id 1, seq 1, length 64
-17:39:10.426136 IP 192.168.10.1 > 192.168.20.1: ICMP echo request, id 1, seq 2, length 64
-17:39:10.426440 IP 192.168.20.1 > 192.168.10.1: ICMP echo reply, id 1, seq 2, length 64
-17:39:11.430385 IP 192.168.10.1 > 192.168.20.1: ICMP echo request, id 1, seq 3, length 64
-17:39:11.432408 IP 192.168.20.1 > 192.168.10.1: ICMP echo reply, id 1, seq 3, length 64
-
-6 packets captured
-6 packets received by filter
-0 packets dropped by kernel
-^Croot@nfsc:~/ospf-hw#
-
-```
-
-Во втором терминале три запроса:
-
-```bash
-root@nfsc:~/ospf-hw# vagrant ssh router1 -c 'ping -c 3 -I 192.168.10.1 192.168.20.1'
-PING 192.168.20.1 (192.168.20.1) from 192.168.10.1 : 56(84) bytes of data.
-64 bytes from 192.168.20.1: icmp_seq=1 ttl=64 time=2.44 ms
-64 bytes from 192.168.20.1: icmp_seq=2 ttl=64 time=4.02 ms
-64 bytes from 192.168.20.1: icmp_seq=3 ttl=64 time=7.33 ms
-
---- 192.168.20.1 ping statistics ---
-3 packets transmitted, 3 received, 0% packet loss, time 2005ms
-rtt min/avg/max/mdev = 2.441/4.597/7.330/2.037 ms
 root@nfsc:~/ospf-hw#
-
 ```
-
-
 
 ##  Проверка симметричный маршрут с дорогим линком
 
 Команда задаёт стоимость `1000` на обоих концах прямого линка `router1–router2`.
 
 ```bash
-root@nfsc:~/ospf-hw# ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook -i ansible/hosts ansible/provision.yml -t setup_ospf -e '{"symmetric_routing": true}'
+root@nfsc:~/ospf-hw# ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook \
+  -i ansible/hosts ansible/provision.yml -t setup_ospf \
+  -e '{"symmetric_routing": true}'
 
 PLAY [OSPF lab (FRR)] *******************************************************************************************************************************************************************************************************
 
 TASK [Gathering Facts] ******************************************************************************************************************************************************************************************************
-ok: [router2]
-ok: [router3]
 ok: [router1]
+ok: [router3]
+ok: [router2]
 
 TASK [frr_ospf : Сгенерировать /etc/frr/frr.conf по host_vars этого роутера] ************************************************************************************************************************************************
 ok: [router1]
-changed: [router2]
 ok: [router3]
+changed: [router2]
 
 RUNNING HANDLER [frr_ospf : restart frr] ************************************************************************************************************************************************************************************
 changed: [router2]
@@ -388,18 +390,43 @@ router1                    : ok=2    changed=0    unreachable=0    failed=0    s
 router2                    : ok=3    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 router3                    : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 
-root@nfsc:~/ospf-hw# vagrant ssh router1 -c 'sudo vtysh -c "show ip ospf interface enp0s8"; ip route get 192.168.20.1 from 192.168.10.1'
-enp0s8 is down
-  ifindex 0, MTU 0 bytes, BW 0 Mbit <>
-  OSPF not enabled on this interface
+root@nfsc:~/ospf-hw# vagrant ssh router1 -c 'sudo vtysh -c "show ip ospf interface eth1"'
+vagrant ssh router2 -c 'sudo vtysh -c "show ip ospf interface eth1"'
+
+vagrant ssh router1 -c 'ip route get 192.168.20.1 from 192.168.10.1'
+vagrant ssh router2 -c 'ip route get 192.168.10.1 from 192.168.20.1'
+eth1 is up
+  ifindex 3, MTU 1500 bytes, BW 0 Mbit <UP,LOWER_UP,BROADCAST,RUNNING,MULTICAST>
+  Internet Address 10.0.10.1/30, Broadcast 10.0.10.3, Area 0.0.0.0
+  MTU mismatch detection: disabled
+  Router ID 1.1.1.1, Network Type BROADCAST, Cost: 1000
+  Transmit Delay is 1 sec, State DR, Priority 1
+  Designated Router (ID) 1.1.1.1 Interface Address 10.0.10.1/30
+  Backup Designated Router (ID) 2.2.2.2, Interface Address 10.0.10.2
+  Multicast group memberships: OSPFAllRouters OSPFDesignatedRouters
+  Timer intervals configured, Hello 10s, Dead 30s, Wait 30s, Retransmit 5
+    Hello due in 3.279s
+  Neighbor Count is 1, Adjacent neighbor count is 1
+  Graceful Restart hello delay: 10s
+  LSA retransmissions: 7
+
+eth1 is up
+  ifindex 3, MTU 1500 bytes, BW 0 Mbit <UP,LOWER_UP,BROADCAST,RUNNING,MULTICAST>
+  Internet Address 10.0.10.2/30, Broadcast 10.0.10.3, Area 0.0.0.0
+  MTU mismatch detection: disabled
+  Router ID 2.2.2.2, Network Type BROADCAST, Cost: 1000
+  Transmit Delay is 1 sec, State Backup, Priority 1
+  Designated Router (ID) 1.1.1.1 Interface Address 10.0.10.1/30
+  Backup Designated Router (ID) 2.2.2.2, Interface Address 10.0.10.2
+  Multicast group memberships: OSPFAllRouters OSPFDesignatedRouters
+  Timer intervals configured, Hello 10s, Dead 30s, Wait 30s, Retransmit 5
+    Hello due in 2.679s
+  Neighbor Count is 1, Adjacent neighbor count is 1
+  Graceful Restart hello delay: 10s
+  LSA retransmissions: 3
 
 192.168.20.1 from 192.168.10.1 via 10.0.12.2 dev eth2 uid 1000
     cache
-root@nfsc:~/ospf-hw# vagrant ssh router2 -c 'sudo vtysh -c "show ip ospf interface enp0s8"; ip route get 192.168.10.1 from 192.168.20.1'
-enp0s8 is down
-  ifindex 0, MTU 0 bytes, BW 0 Mbit <>
-  OSPF not enabled on this interface
-
 192.168.10.1 from 192.168.20.1 via 10.0.11.1 dev eth2 uid 1000
     cache
 root@nfsc:~/ospf-hw#
